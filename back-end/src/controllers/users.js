@@ -7,6 +7,9 @@ const controller = {}     // Objeto vazio
 controller.create = async function(req, res) {
   try {
 
+    //Somente usuários administradores podem acessar esse recurso
+    if(! req?.authUser?.isAdmin) {return res.status(403).end()}
+
     // Verifica se existe o campo "password" e o
     // criptografa antes de criar o novo usuário
     if(req.body.password) {
@@ -28,6 +31,10 @@ controller.create = async function(req, res) {
 
 controller.retrieveAll = async function(req, res) {
   try {
+
+    //Somente usuários administradores podem acessar esse recurso
+    if(! req?.authUser?.isAdmin) {return res.status(403).end()}
+
     const result = await prisma.user.findMany(
       // Omite o campo "password" do resultado
       // por questão de segurança
@@ -54,6 +61,12 @@ controller.retrieveOne = async function(req, res) {
       where: { id: Number(req.params.id) }
     })
 
+    // Somente usuários administradores podem acessar esse recurso
+    // Ou usuários com o mesmo ID do usuário que está sendo consultado
+    if(! (req?.authUser?.isAdmin || 
+      Number(req?.authUser?.id) !== Number(req.params.id)))
+      return res.status(403).end()
+
     // Encontrou ~> retorna HTTP 200: OK (implícito)
     if(result) res.send(result)
     // Não encontrou ~> retorna HTTP 404: Not Found
@@ -69,6 +82,9 @@ controller.retrieveOne = async function(req, res) {
 
 controller.update = async function(req, res) {
   try {
+
+    //Somente usuários administradores podem acessar esse recurso
+    if(! req?.authUser?.isAdmin) {return res.status(403).end()}
 
     // Verifica se existe o campo "password" e o
     // criptografa antes de criar o novo usuário
@@ -99,6 +115,9 @@ controller.delete = async function(req, res) {
     await prisma.user.delete({
       where: { id: Number(req.params.id) }
     })
+
+    //Somente usuários administradores podem acessar esse recurso
+    if(! req?.authUser?.isAdmin) {return res.status(403).end()}
 
     // Encontrou e excluiu ~> HTTP 204: No Content
     res.status(204).end()
@@ -183,6 +202,13 @@ controller.login = async function(req, res) {
     // HTTP 500: Internal Server Error
     res.status(500).end()
   }
+}
+
+controller.logout = function(req, res) {
+  //Apaga no front-end o cookie que armazena o token
+  res.clearCookie(process.env.AUTH_COOKIE_NAME)
+  // HTTP 204: No Content (implícito)
+  res.status(204).end() 
 }
 
 controller.me = function(req, res) {
