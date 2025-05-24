@@ -94,7 +94,8 @@ const routes = [
     path: '/users/:id',
     description: 'Alterar usuário',
     element: <UserForm />,
-    userLevel: ADMIN_USER
+    userLevel: ADMIN_USER,
+    omitFromMainMenu: true
   },
   {
     path: '/brute-force',
