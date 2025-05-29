@@ -1,4 +1,6 @@
 import prisma from '../database/client.js'
+import Vehicles from '../models/Vehicles.js'
+import { ZodError } from 'zod'
 
 const controller = {}     // Objeto vazio
 
@@ -11,6 +13,10 @@ controller.create = async function(req, res) {
     // Preenche qual usuário modificou por último o carro com o id
     // do usuário autenticado
     req.body.updated_user_id = req.authUser.id
+
+
+    //Faça as alterações necessárias no controller de veículos para acionar a validação quando um novo registro for inserido ou alterado.
+    Vehicles.parse(req.body)
 
     await prisma.car.create({ data: req.body })
 
@@ -83,6 +89,9 @@ controller.retrieveOne = async function(req, res) {
 
 controller.update = async function(req, res) {
   try {
+
+    //Faça as alterações necessárias no controller de veículos para acionar a validação quando um novo registro for inserido ou alterado.
+    Vehicles.parse(req.body)
 
     const result = await prisma.car.update({
       where: { id: Number(req.params.id) },
