@@ -1,9 +1,18 @@
 import prisma from '../database/client.js'
+import Car from '../models/Car.js'
+import { ZodError } from 'zod'
 
 const controller = {}     // Objeto vazio
 
 controller.create = async function(req, res) {
   try {
+    // Validação dos dados do veículo
+    Car.parse(req.body)
+
+    // Verifica se o usuário autenticado está presente
+    if (!req.authUser || !req.authUser.id) {
+      return res.status(401).send({ error: 'Usuário não autenticado.' })
+    }
 
     // Preenche qual usuário criou o carro com o id do usuário autenticado
     req.body.created_user_id = req.authUser.id
@@ -19,9 +28,13 @@ controller.create = async function(req, res) {
   }
   catch(error) {
     console.error(error)
-
-    // HTTP 500: Internal Server Error
-    res.status(500).end()
+    if(error instanceof ZodError) {
+      res.status(422).send(error.issues)
+    }
+    else {
+      // HTTP 500: Internal Server Error
+      res.status(500).end()
+    }
   }
 }
 
@@ -83,6 +96,8 @@ controller.retrieveOne = async function(req, res) {
 
 controller.update = async function(req, res) {
   try {
+    // Validação dos dados do veículo
+    Car.parse(req.body)
 
     const result = await prisma.car.update({
       where: { id: Number(req.params.id) },
@@ -96,9 +111,13 @@ controller.update = async function(req, res) {
   }
   catch(error) {
     console.error(error)
-
-    // HTTP 500: Internal Server Error
-    res.status(500).end()
+    if(error instanceof ZodError) {
+      res.status(422).send(error.issues)
+    }
+    else {
+      // HTTP 500: Internal Server Error
+      res.status(500).end()
+    }
   }
 }
 

@@ -23,6 +23,7 @@ export default function AuthControl() {
     if(await askForConfirmation('Deseja realmente sair?')) {
       showWaiting(true)
       try {
+<<<<<<< HEAD
           // Faz uma requisição ao back-end solicitando a
           // exclusão do cookie com o token de autorização
         await myfetch.post('/users/logout')
@@ -40,6 +41,26 @@ export default function AuthControl() {
       finally {
         showWaiting(false)
       }
+=======
+        // Faz uma requisição ao back-end solicitando a
+        // exclusão do cookie com o token de autorização
+        await myfetch.post('/users/logout')
+
+        // Apaga as informações em memória sobre o usuário
+        // autenticado
+        setAuthUser(null)
+
+        // Redireciona para a página de login
+        navigate('/login')
+      }
+      catch(error) {
+
+      }
+      finally {
+        showWaiting(false)
+      }
+
+>>>>>>> f70bcabc1c8d86689e34f00fb0ac05c95ea186aa
     }
   }
 

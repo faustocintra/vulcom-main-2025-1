@@ -2,24 +2,27 @@ import React from 'react'
 import { Routes, Route } from 'react-router-dom'
 
 import AuthGuard from './AuthGuard'
+<<<<<<< HEAD
 
 import Homepage from '../pages/Homepage'
+=======
+>>>>>>> f70bcabc1c8d86689e34f00fb0ac05c95ea186aa
 
-import CarForm from '../pages/car/CarForm'
-import CarList from '../pages/car/CarList'
-
-import CustomerForm from '../pages/customer/CustomerForm'
-import CustomerList from '../pages/customer/CustomerList'
-
-import UserList from '../pages/user/UserList'
-import UserForm from '../pages/user/UserForm'
-
-import Login from '../pages/Login'
+import { routes, NO_USER } from './routes'
 
 export default function AppRoutes() {
   return <Routes>
-    <Route path="/" element={ <Homepage /> } />
+    {
+      routes.map(route => {
+        let element
+        if(route.userLevel > NO_USER) {
+          element = <AuthGuard userLevel={route.userLevel}>
+            { route.element }
+          </AuthGuard>
+        }
+        else element = route.element
 
+<<<<<<< HEAD
     <Route path="/login" element={ <Login /> } />
 
     <Route path="/cars" element={<AuthGuard> <CarList /> </AuthGuard>} />
@@ -40,5 +43,14 @@ export default function AppRoutes() {
     <Route path="/users/new" element={ <AuthGuard adminOnly={true} > <UserForm /> </AuthGuard> } />
     <Route path="/users/:id" element={ <AuthGuard adminOnly={true} > <UserForm /> </AuthGuard> } />
     
+=======
+        return <Route
+          key={route.path}
+          path={route.path}
+          element={element}
+        />
+      })
+    }    
+>>>>>>> f70bcabc1c8d86689e34f00fb0ac05c95ea186aa
   </Routes>
 }
