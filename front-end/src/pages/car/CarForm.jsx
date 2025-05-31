@@ -83,6 +83,11 @@ export default function CarForm() {
   // car.imported = imported
   const handleImportedChange = (event) => {
     setImported(event.target.checked)
+    setState((prev) => ({
+      ...prev,
+      car: { ...prev.car, imported: event.target.checked },
+      formModified: true
+    }));
   }
 
   function handleFieldChange(event) {
@@ -93,10 +98,20 @@ export default function CarForm() {
 
   async function handleFormSubmit(event) {
     event.preventDefault(); // Evita que a página seja recarregada
+
+    // Validação de erros do formulário
+    const errors = validate(car);
+    if (Object.keys(errors).length > 0) {
+      setState((prev) => ({ ...prev, inputErrors: errors }));
+      notify('Corrija os erros do formulário.', 'error');
+      return;
+    }
+    setState((prev) => ({ ...prev, inputErrors: {} }));
+
     showWaiting(true); // Exibe a tela de espera
     try {
 
-      if(car.selling_price === '') car.selling_price = null
+      if (car.selling_price === '') car.selling_price = null
 
       // Se houver parâmetro na rota, significa que estamos modificando
       // um cliente já existente. A requisição será enviada ao back-end
@@ -142,14 +157,14 @@ export default function CarForm() {
 
       // Se houver parâmetro na rota, precisamos buscar o carro para
       // ser editado
-      if(params.id) {
+      if (params.id) {
 
         car = await myfetch.get(`/cars/${params.id}`)
 
         // Converte o formato de data armazenado no banco de dados
         // para o formato reconhecido pelo componente DatePicker
-        
-        if(car.selling_date) {
+
+        if (car.selling_date) {
           car.selling_date = parseISO(car.selling_date)
         }
       }
@@ -178,11 +193,75 @@ export default function CarForm() {
   }
 
   function handleKeyDown(event) {
-    if(event.key === 'Delete') {
-      const stateCopy = {...state}
+    if (event.key === 'Delete') {
+      const stateCopy = { ...state }
       stateCopy.car.customer_id = null
       setState(stateCopy)
     }
+  }
+
+  function validate(car) {
+    const errors = {};
+    const allowedColors = [
+      'AMARELO', 'AZUL', 'BRANCO', 'CINZA', 'DOURADO', 'LARANJA', 'MARROM',
+      'PRATA', 'PRETO', 'ROSA', 'ROXO', 'VERDE', 'VERMELHO'
+    ];
+    const currentYear = new Date().getFullYear();
+
+    // brand
+    if (!car.brand || car.brand.length < 1 || car.brand.length > 25) {
+      errors.brand = 'Marca deve ter entre 1 e 25 caracteres';
+    }
+
+    // model
+    if (!car.model || car.model.length < 1 || car.model.length > 25) {
+      errors.model = 'Modelo deve ter entre 1 e 25 caracteres';
+    }
+
+    // color
+    if (!allowedColors.includes(car.color)) {
+      errors.color = 'Selecione uma cor válida';
+    }
+
+    // year_manufacture
+    if (
+      !car.year_manufacture ||
+      isNaN(car.year_manufacture) ||
+      car.year_manufacture < 1960 ||
+      car.year_manufacture > currentYear
+    ) {
+      errors.year_manufacture = `Ano deve ser entre 1960 e ${currentYear}`;
+    }
+
+    // imported
+    if (typeof car.imported !== 'boolean') {
+      errors.imported = 'Informe se o carro é importado';
+    }
+
+    // plates
+    if (!car.plates || car.plates.length !== 8) {
+      errors.plates = 'Placa deve ter exatamente 8 caracteres';
+    }
+
+    // selling_date (opcional)
+    if (car.selling_date) {
+      const minDate = new Date('2020-01-01');
+      const maxDate = new Date();
+      const date = new Date(car.selling_date);
+      if (date < minDate || date > maxDate) {
+        errors.selling_date = 'Data deve ser entre 01/01/2020 e hoje';
+      }
+    }
+
+    // selling_price (opcional)
+    if (car.selling_price) {
+      const price = Number(car.selling_price);
+      if (isNaN(price) || price < 1000 || price > 5000000) {
+        errors.selling_price = 'Preço deve ser entre 1.000 e 5.000.000';
+      }
+    }
+
+    return errors;
   }
 
   return (
@@ -229,8 +308,8 @@ export default function CarForm() {
             value={car.color}
             onChange={handleFieldChange}
             select
-            helperText={inputErrors?.state}
-            error={inputErrors?.state}
+            helperText={inputErrors?.color}
+            error={inputErrors?.color}
           >
             {colors.map((s) => (
               <MenuItem key={s.value} value={s.value}>
@@ -288,8 +367,8 @@ export default function CarForm() {
                 variant='filled'
                 required
                 fullWidth
-                helperText={inputErrors?.phone}
-                error={inputErrors?.phone}
+                helperText={inputErrors?.plates}
+                error={!!inputErrors?.plates}
               />
             )}
           </InputMask>
