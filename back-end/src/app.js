@@ -4,7 +4,6 @@ dotenv.config() // Carrega as variáveis de ambiente do arquivo .env
 import express, { json, urlencoded } from 'express'
 import cookieParser from 'cookie-parser'
 import logger from 'morgan'
-import auth from './middleware/auth.js'
 
 const app = express()
 
@@ -27,7 +26,6 @@ app.use(logger('dev'))
 app.use(json())
 app.use(urlencoded({ extended: false }))
 app.use(cookieParser())
-app.use(auth)
 
 // Rate limiter: limita a quantidade de requisições que cada usuário/IP
 // pode efetuar dentro de um determinado intervalo de tempo
@@ -44,7 +42,7 @@ app.use(limiter)
 
 // Middleware de verificação do token de autorização
 import auth from './middleware/auth.js'
-app.use(auth)
+// app.use(auth)
 
 import carsRouter from './routes/cars.js'
 app.use('/cars', carsRouter)
