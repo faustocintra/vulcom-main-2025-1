@@ -1,18 +1,17 @@
 import prisma from '../database/client.js'
+import carSchema from '../validators/car.js' // importa o schema Zod
 
 const controller = {}     // Objeto vazio
 
 controller.create = async function(req, res) {
   try {
+    // Validação com Zod
+    const parseResult = carSchema.safeParse(req.body)
+    if (!parseResult.success) {
+      return res.status(400).json({ error: parseResult.error.errors })
+    }
 
-    // Preenche qual usuário criou o carro com o id do usuário autenticado
-    req.body.created_user_id = req.authUser.id
-
-    // Preenche qual usuário modificou por último o carro com o id
-    // do usuário autenticado
-    req.body.updated_user_id = req.authUser.id
-
-    await prisma.car.create({ data: req.body })
+    await prisma.car.create({ data: parseResult.data })
 
     // HTTP 201: Created
     res.status(201).end()
@@ -83,10 +82,15 @@ controller.retrieveOne = async function(req, res) {
 
 controller.update = async function(req, res) {
   try {
+    // Validação com Zod
+    const parseResult = carSchema.safeParse(req.body)
+    if (!parseResult.success) {
+      return res.status(400).json({ error: parseResult.error.errors })
+    }
 
     const result = await prisma.car.update({
       where: { id: Number(req.params.id) },
-      data: req.body
+      data: parseResult.data
     })
 
     // Encontrou e atualizou ~> HTTP 204: No Content
