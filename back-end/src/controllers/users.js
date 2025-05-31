@@ -8,7 +8,7 @@ controller.create = async function(req, res) {
   try {
 
     // Somente usuários administradores podem acessar este recurso
-    // HTTP 403: Forbidden(
+    // HTTP 403: Forbidden
     if(! req?.authUser?.is_admin) return res.status(403).end()
 
     // Verifica se existe o campo "password" e o

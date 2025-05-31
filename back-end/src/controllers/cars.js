@@ -1,4 +1,6 @@
 import prisma from '../database/client.js'
+import Cars from '../models/Cars.js'
+import { ZodError } from 'zod'
 
 const controller = {}     // Objeto vazio
 
@@ -6,11 +8,28 @@ controller.create = async function(req, res) {
   try {
 
     // Preenche qual usuário criou o carro com o id do usuário autenticado
-    req.body.created_user_id = req.authUser.id
+    ////////////////////req.body.created_user_id = req.authUser.id
 
     // Preenche qual usuário modificou por último o carro com o id
     // do usuário autenticado
-    req.body.updated_user_id = req.authUser.id
+    ///////////////////req.body.updated_user_id = req.authUser.id
+
+
+
+
+    //////////////////////////////////////////////////////////////////////////////
+    // Sempre que houver um campo que represente uma data,
+    // precisamos garantir sua conversão para o tipo Date
+    // antes de passá-lo ao Zod para validação
+    if(req.body.birth_date) req.body.birth_date = new Date(req.body.birth_date)
+
+    // Invoca a validação do modelo do Zod para os dados que
+    // vieram em req.body
+    Cars.parse(req.body)
+    //////////////////////////////////////////////////////////////////////////////
+
+
+
 
     await prisma.car.create({ data: req.body })
 
@@ -19,6 +38,13 @@ controller.create = async function(req, res) {
   }
   catch(error) {
     console.error(error)
+
+    //////////////////////////////////////////////////////////////////////////////
+    // Se for erro de validação do Zod, retorna
+    // HTTP 422: Unprocessable Entity
+    if(error instanceof ZodError) res.status(422).send(error.issues)
+    //////////////////////////////////////////////////////////////////////////////
+
 
     // HTTP 500: Internal Server Error
     res.status(500).end()
@@ -84,13 +110,40 @@ controller.retrieveOne = async function(req, res) {
 controller.update = async function(req, res) {
   try {
 
+
+
+    //////////////////////////////////////////////////////////////////////////////
+    // Sempre que houver um campo que represente uma data,
+    // precisamos garantir sua conversão para o tipo Date
+    // antes de passá-lo ao Zod para validação
+    if(req.body.birth_date) req.body.birth_date = new Date(req.body.birth_date)
+
+    // Invoca a validação do modelo do Zod para os dados que
+    // vieram em req.body
+    Cars.parse(req.body)
+    //////////////////////////////////////////////////////////////////////////////
+
+
+
+
     const result = await prisma.car.update({
       where: { id: Number(req.params.id) },
       data: req.body
     })
 
+    
     // Encontrou e atualizou ~> HTTP 204: No Content
     if(result) res.status(204).end()
+
+
+
+    /////////////////////////////////////////////////////////////////////
+    // Erro do Zod ~> HTTP 422: Unprocessable Entity
+    else if(error instanceof ZodError) res.status(422).send(error.issues)
+    /////////////////////////////////////////////////////////////////////
+
+
+
     // Não encontrou (e não atualizou) ~> HTTP 404: Not Found
     else res.status(404).end()
   }
