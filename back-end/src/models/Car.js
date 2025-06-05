@@ -41,16 +41,20 @@ const Car = z.object({
     .max(currentYear, { message: `O ano de fabricação deve ser, no máximo, ${currentYear}.` }),
   imported: z.boolean({ required_error: 'O campo importado é obrigatório.' }),
   plates: z.string()
-    .length(8, { message: 'A placa deve ter exatamente 8 caracteres.' }),
+    .transform(val => val.replace(/[\s-]/g, '')) // Remove spaces and dashes
+    .refine(val => val.length === 7, { message: 'A placa deve ter exatamente 7 caracteres.' }),
   selling_date: z.coerce.date()
     .min(minSellingDate, { message: 'A data de venda não pode ser anterior a 01/01/2020.' })
     .max(maxSellingDate, { message: 'A data de venda não pode ser no futuro.' })
-    .optional()
-    .or(z.literal('').transform(() => undefined)), // Permite campo vazio
+    .nullish(), // Allow null/undefined
   selling_price: z.coerce.number()
     .min(1000, { message: 'O preço de venda deve ser, no mínimo, R$ 1.000,00.' })
     .max(5000000, { message: 'O preço de venda deve ser, no máximo, R$ 5.000.000,00.' })
-    .optional()
+    .nullish(), // Allow null/undefined
+  customer_id: z.coerce.number()
+    .int({ message: 'ID do cliente deve ser um número inteiro.' })
+    .positive({ message: 'ID do cliente deve ser positivo.' })
+    .nullish() // Allow null/undefined
 })
 
-export default Cars
+export default Car
