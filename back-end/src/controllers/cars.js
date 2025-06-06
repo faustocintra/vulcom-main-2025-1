@@ -1,26 +1,60 @@
 import prisma from '../database/client.js'
-import carSchema from '../validators/car.js' // importa o schema Zod
+import Car from '../models/Car.js'
+import { ZodError } from 'zod'
 
 const controller = {}     // Objeto vazio
 
 controller.create = async function(req, res) {
   try {
-    // Validação com Zod
-    const parseResult = carSchema.safeParse(req.body)
-    if (!parseResult.success) {
-      return res.status(400).json({ error: parseResult.error.errors })
+    // Convert selling_date to Date if provided
+    if(req.body.selling_date) req.body.selling_date = new Date(req.body.selling_date)
+    
+    // Convert year_manufacture to number
+    if(req.body.year_manufacture) req.body.year_manufacture = Number(req.body.year_manufacture)
+    
+    // Convert selling_price to number or null
+    if(req.body.selling_price === '' || req.body.selling_price === null) {
+      req.body.selling_price = null
+    } else if(req.body.selling_price) {
+      req.body.selling_price = Number(req.body.selling_price)
+    }
+    
+    // Convert customer_id to number or null
+    if(req.body.customer_id === '' || req.body.customer_id === null) {
+      req.body.customer_id = null
+    } else if(req.body.customer_id) {
+      req.body.customer_id = Number(req.body.customer_id)
     }
 
-    await prisma.car.create({ data: parseResult.data })
+    // Validação dos dados do veículo
+    Car.parse(req.body)
+
+    // Verifica se o usuário autenticado está presente
+    if (!req.authUser || !req.authUser.id) {
+      return res.status(401).send({ error: 'Usuário não autenticado.' })
+    }
+
+    // Preenche qual usuário criou o carro com o id do usuário autenticado
+    req.body.created_user_id = req.authUser.id
+
+    // Preenche qual usuário modificou por último o carro com o id
+    // do usuário autenticado
+    req.body.updated_user_id = req.authUser.id
+
+    await prisma.car.create({ data: req.body })
 
     // HTTP 201: Created
     res.status(201).end()
   }
   catch(error) {
     console.error(error)
-
-    // HTTP 500: Internal Server Error
-    res.status(500).end()
+    if(error instanceof ZodError) {
+      res.status(422).send(error.issues)
+    }
+    else {
+      // HTTP 500: Internal Server Error
+      res.status(500).end()
+    }
   }
 }
 
@@ -82,15 +116,40 @@ controller.retrieveOne = async function(req, res) {
 
 controller.update = async function(req, res) {
   try {
-    // Validação com Zod
-    const parseResult = carSchema.safeParse(req.body)
-    if (!parseResult.success) {
-      return res.status(400).json({ error: parseResult.error.errors })
+    // Convert selling_date to Date if provided
+    if(req.body.selling_date) req.body.selling_date = new Date(req.body.selling_date)
+    
+    // Convert year_manufacture to number
+    if(req.body.year_manufacture) req.body.year_manufacture = Number(req.body.year_manufacture)
+    
+    // Convert selling_price to number or null
+    if(req.body.selling_price === '' || req.body.selling_price === null) {
+      req.body.selling_price = null
+    } else if(req.body.selling_price) {
+      req.body.selling_price = Number(req.body.selling_price)
     }
+    
+    // Convert customer_id to number or null
+    if(req.body.customer_id === '' || req.body.customer_id === null) {
+      req.body.customer_id = null
+    } else if(req.body.customer_id) {
+      req.body.customer_id = Number(req.body.customer_id)
+    }
+
+    // Verifica se o usuário autenticado está presente
+    if (!req.authUser || !req.authUser.id) {
+      return res.status(401).send({ error: 'Usuário não autenticado.' })
+    }
+
+    // Preenche qual usuário modificou por último o carro
+    req.body.updated_user_id = req.authUser.id
+
+    // Validação dos dados do veículo
+    Car.parse(req.body)
 
     const result = await prisma.car.update({
       where: { id: Number(req.params.id) },
-      data: parseResult.data
+      data: req.body
     })
 
     // Encontrou e atualizou ~> HTTP 204: No Content
@@ -100,9 +159,15 @@ controller.update = async function(req, res) {
   }
   catch(error) {
     console.error(error)
-
-    // HTTP 500: Internal Server Error
-    res.status(500).end()
+    
+    // Não encontrou e não atualizou ~> HTTP 404: Not Found
+    if(error?.code === 'P2025') res.status(404).end()
+    
+    // Erro do Zod ~> HTTP 422: Unprocessable Entity
+    else if(error instanceof ZodError) res.status(422).send(error.issues)
+    
+    // Outros erros ~> HTTP 500: Internal Server Error
+    else res.status(500).end()
   }
 }
 
