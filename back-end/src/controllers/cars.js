@@ -1,35 +1,57 @@
 import prisma from '../database/client.js'
+import { vehicleSchema } from '../models/Car.js' // Validador Zod
+import { ZodError } from 'zod'
 
-const controller = {}     // Objeto vazio
+const controller = {}
 
 controller.create = async function(req, res) {
   try {
+    // Conversões
+    if (req.body.selling_date) req.body.selling_date = new Date(req.body.selling_date)
 
-    // Preenche qual usuário criou o carro com o id do usuário autenticado
+    if (req.body.year_manufacture) req.body.year_manufacture = Number(req.body.year_manufacture)
+
+    if (req.body.selling_price === '' || req.body.selling_price === null) {
+      req.body.selling_price = null
+    } else if (req.body.selling_price) {
+      req.body.selling_price = Number(req.body.selling_price)
+    }
+
+    if (req.body.customer_id === '' || req.body.customer_id === null) {
+      req.body.customer_id = null
+    } else if (req.body.customer_id) {
+      req.body.customer_id = Number(req.body.customer_id)
+    }
+
+    // Preenche usuário autenticado
+    if (!req.authUser || !req.authUser.id) {
+      return res.status(401).json({ error: 'Usuário não autenticado.' })
+    }
+
     req.body.created_user_id = req.authUser.id
-
-    // Preenche qual usuário modificou por último o carro com o id
-    // do usuário autenticado
     req.body.updated_user_id = req.authUser.id
 
-    await prisma.car.create({ data: req.body })
+    const validatedData = vehicleSchema.parse(req.body)
 
-    // HTTP 201: Created
+    await prisma.car.create({ data: validatedData })
+
     res.status(201).end()
   }
-  catch(error) {
+  catch (error) {
     console.error(error)
 
-    // HTTP 500: Internal Server Error
+    if (error instanceof ZodError) {
+      return res.status(422).json({ error: error.errors }) // 422 para erro de validação
+    }
+
     res.status(500).end()
   }
 }
 
 controller.retrieveAll = async function(req, res) {
   try {
-
     const includedRels = req.query.include?.split(',') ?? []
-    
+
     const result = await prisma.car.findMany({
       orderBy: [
         { brand: 'asc' },
@@ -43,20 +65,16 @@ controller.retrieveAll = async function(req, res) {
       }
     })
 
-    // HTTP 200: OK (implícito)
     res.send(result)
   }
-  catch(error) {
+  catch (error) {
     console.error(error)
-
-    // HTTP 500: Internal Server Error
     res.status(500).end()
   }
 }
 
 controller.retrieveOne = async function(req, res) {
   try {
-
     const includedRels = req.query.include?.split(',') ?? []
 
     const result = await prisma.car.findUnique({
@@ -68,36 +86,58 @@ controller.retrieveOne = async function(req, res) {
       }
     })
 
-    // Encontrou ~> retorna HTTP 200: OK (implícito)
-    if(result) res.send(result)
-    // Não encontrou ~> retorna HTTP 404: Not Found
+    if (result) res.send(result)
     else res.status(404).end()
   }
-  catch(error) {
+  catch (error) {
     console.error(error)
-
-    // HTTP 500: Internal Server Error
     res.status(500).end()
   }
 }
 
 controller.update = async function(req, res) {
   try {
+    // Conversões
+    if (req.body.selling_date) req.body.selling_date = new Date(req.body.selling_date)
+
+    if (req.body.year_manufacture) req.body.year_manufacture = Number(req.body.year_manufacture)
+
+    if (req.body.selling_price === '' || req.body.selling_price === null) {
+      req.body.selling_price = null
+    } else if (req.body.selling_price) {
+      req.body.selling_price = Number(req.body.selling_price)
+    }
+
+    if (req.body.customer_id === '' || req.body.customer_id === null) {
+      req.body.customer_id = null
+    } else if (req.body.customer_id) {
+      req.body.customer_id = Number(req.body.customer_id)
+    }
+
+    if (!req.authUser || !req.authUser.id) {
+      return res.status(401).json({ error: 'Usuário não autenticado.' })
+    }
+
+    req.body.updated_user_id = req.authUser.id
+
+    const validatedData = vehicleSchema.parse(req.body)
 
     const result = await prisma.car.update({
       where: { id: Number(req.params.id) },
-      data: req.body
+      data: validatedData
     })
 
-    // Encontrou e atualizou ~> HTTP 204: No Content
-    if(result) res.status(204).end()
-    // Não encontrou (e não atualizou) ~> HTTP 404: Not Found
-    else res.status(404).end()
+    res.status(204).end()
   }
-  catch(error) {
+  catch (error) {
     console.error(error)
 
-    // HTTP 500: Internal Server Error
+    if (error?.code === 'P2025') return res.status(404).end()
+
+    if (error instanceof ZodError) {
+      return res.status(422).json({ error: error.errors })
+    }
+
     res.status(500).end()
   }
 }
@@ -108,19 +148,14 @@ controller.delete = async function(req, res) {
       where: { id: Number(req.params.id) }
     })
 
-    // Encontrou e excluiu ~> HTTP 204: No Content
     res.status(204).end()
   }
-  catch(error) {
-    if(error?.code === 'P2025') {
-      // Não encontrou e não excluiu ~> HTTP 404: Not Found
+  catch (error) {
+    if (error?.code === 'P2025') {
       res.status(404).end()
     }
     else {
-      // Outros tipos de erro
       console.error(error)
-
-      // HTTP 500: Internal Server Error
       res.status(500).end()
     }
   }
